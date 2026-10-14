@@ -15,6 +15,22 @@ Personal daily-priorities scorecard. Full spec: [nickapp-spec.md](nickapp-spec.m
 Both run as nick@uptopacres.com. The PWA uses live by default; add `?env=test` to the
 Pages URL to hit the test backend.
 
+## First-time Sheet setup
+
+In each Sheet's script editor (Extensions → Apps Script), run `setup` and approve the
+permissions. It creates the tabs, seeds Targets / CommonExercises / ReadingList / Users,
+creates the Drive photo folder, and logs the personal install link. It is safe to re-run.
+`showMyUrl` prints the install link again.
+
+## Tests
+
+The pace rule lives in `apps-script/Pacing.js` and is shared by Apps Script, the PWA,
+and Node:
+
+```
+node --test tests/*.test.js
+```
+
 ## Deploy
 
 **PWA:** push to `main`; the Pages workflow publishes `web/`.

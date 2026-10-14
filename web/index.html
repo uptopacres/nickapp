@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>NickApp</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; margin: 0; padding: 24px; color: #333132; background: #fff; }
+    h1 { color: #004D40; font-weight: 600; }
+    button { font: inherit; padding: 12px 20px; border: 0; border-radius: 6px; background: #004D40; color: #E5EADE; }
+    pre { background: #E5EADE; padding: 12px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
+  </style>
+</head>
+<body>
+  <h1>NickApp</h1>
+  <p>Step 1 pipeline check: GitHub Pages → Apps Script.</p>
+  <button id="ping">Ping data service</button>
+  <pre id="out">Not run yet.</pre>
+
+  <script type="module">
+    import { API_URL, ENV } from './js/config.js';
+    const out = document.getElementById('out');
+    out.textContent = `Not run yet (env: ${ENV}).`;
+    document.getElementById('ping').addEventListener('click', async () => {
+      out.textContent = 'Pinging…';
+      const t0 = performance.now();
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'ping' }),
+        });
+        const data = await res.json();
+        out.textContent = JSON.stringify(data, null, 2) + `\n\n${Math.round(performance.now() - t0)} ms`;
+      } catch (err) {
+        out.textContent = 'Failed: ' + err;
+      }
+    });
+  </script>
+</body>
+</html>

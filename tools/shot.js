@@ -1,13 +1,20 @@
 // Phone-sized screenshot of a URL via headless Edge/Chrome and the DevTools protocol.
 // Waits for a selector (the app renders after IndexedDB/network, past the load event),
 // and prints console messages and exceptions. Fresh profile each run.
-// Run: node tools/shot.js <url> <out.png> [selector] [--offline-reload]
+// Run: node tools/shot.js <url> <out.png> [selector] [--offline-reload] [--eval=<file.js>] [--viewport]
+//   --eval runs the file in the page (as an async function body) after it renders and
+//   prints what it returns; use it to drive a flow (fill the form, save) before the shot.
 const { spawn } = require('child_process');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const [url, out, selector = '.prow, .notice', flag] = process.argv.slice(2);
+const args = process.argv.slice(2);
+const flags = args.filter(a => a.startsWith('--'));
+const [url, out, selector = '.prow, .notice'] = args.filter(a => !a.startsWith('--'));
+const offlineReload = flags.includes('--offline-reload');
+const evalFile = flags.find(f => f.startsWith('--eval='))?.slice(7);
+const viewportOnly = flags.includes('--viewport'); // capture what is on screen, not the full page
 if (!url || !out) {
   console.error('usage: node tools/shot.js <url> <out.png> [selector] [--offline-reload]');
   process.exit(2);
@@ -78,19 +85,32 @@ async function main() {
   }
 
   await load('online');
-  if (flag === '--offline-reload') {
+  if (offlineReload) {
     await sleep(1500); // let the service worker finish installing
     await send('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 });
     await load('offline reload');
   }
 
-  await sleep(600); // fonts settle
+  if (evalFile) {
+    const body = fs.readFileSync(evalFile, 'utf8');
+    const r = await send('Runtime.evaluate', { expression: `(async () => {${body}
+})()`, returnByValue: true, awaitPromise: true });
+    if (r.exceptionDetails) console.log('eval EXCEPTION:', r.exceptionDetails.exception?.description || r.exceptionDetails.text);
+    else console.log('eval:', JSON.stringify(r.result.value));
+  }
+
+  await sleep(900); // fonts settle, motion finishes
   const { cssContentSize } = await send('Page.getLayoutMetrics');
-  const shot = await send('Page.captureScreenshot', {
-    format: 'png',
-    captureBeyondViewport: true,
-    clip: { x: 0, y: 0, width: 390, height: Math.max(844, Math.ceil(cssContentSize.height)), scale: 1 },
-  });
+  const shot = await send(
+    'Page.captureScreenshot',
+    viewportOnly
+      ? { format: 'png' }
+      : {
+          format: 'png',
+          captureBeyondViewport: true,
+          clip: { x: 0, y: 0, width: 390, height: Math.max(844, Math.ceil(cssContentSize.height)), scale: 1 },
+        }
+  );
   fs.writeFileSync(out, Buffer.from(shot.data, 'base64'));
   console.log('wrote', out);
   ws.close();

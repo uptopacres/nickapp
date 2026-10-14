@@ -30,6 +30,7 @@ export function renderSettings(root, s, { onRefresh }) {
         <dt>Connection</dt><dd>${navigator.onLine ? 'online' : 'offline'}</dd>
         <dt>Last synced</dt><dd>${s.syncing ? 'syncing…' : when(s.lastSync)}</dd>
         <dt>Days cached</dt><dd>${s.entriesCount}</dd>
+        <dt>Waiting to upload</dt><dd>${s.outbox?.length || 0}</dd>
         <dt>Config version</dt><dd class="mono">${esc(s.config?.version || '—')}</dd>
       </dl>
       <button class="btn" id="refresh" ${s.syncing || s.demo || !navigator.onLine ? 'disabled' : ''}>Refresh now</button>

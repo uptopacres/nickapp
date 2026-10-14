@@ -34,11 +34,62 @@ function cellOut_(header, v) {
   return v;
 }
 
+function cellIn_(v) {
+  return v === undefined || v === null ? '' : v;
+}
+
+/** Number formats for a row: typed columns get theirs, everything else keeps `current`. */
+function rowFormats_(headers, current) {
+  return headers.map((h, i) => CELL_FORMATS[COLUMN_TYPES[h]] || current[i]);
+}
+
 /** Appends objects as rows, placing each value under its header; unknown keys are dropped. */
 function appendRows_(name, objs) {
   if (!objs.length) return;
   const sh = sheet_(name);
   const headers = headers_(sh);
-  const rows = objs.map(o => headers.map(h => (o[h] === undefined || o[h] === null ? '' : o[h])));
-  sh.getRange(sh.getLastRow() + 1, 1, rows.length, headers.length).setValues(rows);
+  const range = sh.getRange(sh.getLastRow() + 1, 1, objs.length, headers.length);
+  const formats = range.getNumberFormats().map(f => rowFormats_(headers, f));
+  range.setNumberFormats(formats);
+  range.setValues(objs.map(o => headers.map(h => cellIn_(o[h]))));
+}
+
+/**
+ * Writes `obj` into the row whose `keyHeader` matches, or appends it. Columns not in
+ * `obj` keep their current values, so admin-added columns survive an upsert.
+ */
+function upsertRow_(name, keyHeader, obj) {
+  const sh = sheet_(name);
+  const headers = headers_(sh);
+  const keyCol = headers.indexOf(keyHeader);
+  if (keyCol < 0) throw new Error('missing-column:' + keyHeader);
+
+  const last = sh.getLastRow();
+  let rowIdx = -1;
+  if (last > 1) {
+    const keys = sh.getRange(2, keyCol + 1, last - 1, 1).getValues();
+    const i = keys.findIndex(r => String(r[0]) === String(obj[keyHeader]));
+    if (i >= 0) rowIdx = i + 2;
+  }
+
+  const range = sh.getRange(rowIdx > 0 ? rowIdx : last + 1, 1, 1, headers.length);
+  const current = range.getValues()[0];
+  range.setNumberFormats([rowFormats_(headers, range.getNumberFormats()[0])]);
+  range.setValues([headers.map((h, i) => (h in obj ? cellIn_(obj[h]) : current[i]))]);
+}
+
+/** Deletes every row whose `header` equals `value` (bottom-up, in contiguous runs). */
+function deleteRowsWhere_(name, header, value) {
+  const sh = sheet_(name);
+  const col = headers_(sh).indexOf(header);
+  const last = sh.getLastRow();
+  if (col < 0 || last < 2) return;
+  const vals = sh.getRange(2, col + 1, last - 1, 1).getValues();
+  for (let i = vals.length - 1; i >= 0; ) {
+    if (String(vals[i][0]) !== String(value)) { i--; continue; }
+    let start = i;
+    while (start > 0 && String(vals[start - 1][0]) === String(value)) start--;
+    sh.deleteRows(start + 2, i - start + 1);
+    i = start - 1;
+  }
 }

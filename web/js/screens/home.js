@@ -15,25 +15,51 @@ function countText(p) {
   return `${p.hits}/${p.target}`;
 }
 
-function priorityRow(p) {
+// `shown` is what the row paints first: the pre-save state for rows that are about to flip.
+function priorityRow(p, shown = p) {
   return `
-    <li class="prow s-${esc(p.status)}" data-key="${esc(p.key)}">
+    <li class="prow s-${esc(shown.status)}" data-key="${esc(p.key)}">
       <div class="prow-top">
         <span class="prow-label">${esc(p.label)}</span>
-        <span class="pill">${STATUS_TEXT[p.status] || esc(p.status)}</span>
-        <span class="prow-count">${countText(p)}</span>
+        <span class="pill">${STATUS_TEXT[shown.status] || esc(shown.status)}</span>
+        <span class="prow-count">${countText(shown)}</span>
       </div>
       <div class="bar" role="img" aria-label="${esc(p.label)}: ${countText(p)}, ${STATUS_TEXT[p.status] || ''}">
-        <span style="--fill:${fillPct(p)}%"></span>
+        <span style="--fill:${fillPct(shown)}%"></span>
       </div>
     </li>`;
+}
+
+/**
+ * The one orchestrated motion moment (spec §3.1): after a Save, rows whose numbers
+ * changed paint their old state, then fill and recolor to the new one.
+ */
+function playFlips(root, flips) {
+  if (!flips.length) return;
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    for (const { from, to } of flips) {
+      const row = root.querySelector(`.prow[data-key='${CSS.escape(to.key)}']`);
+      if (!row) continue;
+      row.querySelector('.bar').classList.add('animate');
+      row.classList.replace(`s-${from.status}`, `s-${to.status}`);
+      row.querySelector('.bar > span').style.setProperty('--fill', `${fillPct(to)}%`);
+      row.querySelector('.pill').textContent = STATUS_TEXT[to.status] || to.status;
+      row.querySelector('.prow-count').textContent = countText(to);
+    }
+  }));
 }
 
 function streakText(n) {
   return n > 0 ? `${n}-day streak` : 'No streak yet';
 }
 
-export function renderHome(root, home, { offline = false, demo = false } = {}) {
+export function renderHome(root, home, { offline = false, demo = false, pending = 0, from = null } = {}) {
+  const before = new Map((from?.priorities || []).map(p => [p.key, p]));
+  const flips = home.priorities
+    .map(to => ({ from: before.get(to.key), to }))
+    .filter(({ from: f, to }) => f && (f.hits !== to.hits || f.status !== to.status));
+  const shownFor = p => flips.find(f => f.to.key === p.key)?.from || p;
+
   const dots = home.adherence.days
     .map((d, i) => {
       const cls = ['dot', d.logged && 'logged', d.date === home.today && 'today'].filter(Boolean).join(' ');
@@ -50,6 +76,7 @@ export function renderHome(root, home, { offline = false, demo = false } = {}) {
       <div class="topbar-actions">
         ${demo ? '<span class="pill pill-quiet">demo</span>' : ''}
         ${offline ? '<span class="pill pill-quiet">offline</span>' : ''}
+        ${pending ? `<span class="pill pill-quiet">${pending} to upload</span>` : ''}
         <a class="icon-btn" href="#settings" aria-label="Settings">${ICONS.gear}</a>
       </div>
     </header>
@@ -73,6 +100,8 @@ export function renderHome(root, home, { offline = false, demo = false } = {}) {
     </a>`}
 
     <section class="card card-list" aria-label="Priorities">
-      <ul class="plist inner">${home.priorities.map(priorityRow).join('')}</ul>
+      <ul class="plist inner">${home.priorities.map(p => priorityRow(p, shownFor(p))).join('')}</ul>
     </section>`;
+
+  playFlips(root, flips);
 }

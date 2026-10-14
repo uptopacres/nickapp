@@ -12,6 +12,13 @@ export function todayEt(now = new Date()) {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+/** "Tue, Oct 13" */
+export function dayLabel(iso) {
+  const d = new Date(iso + 'T12:00:00Z');
+  return `${DAYS[d.getUTCDay()]}, ${MONTHS[d.getUTCMonth()]} ${d.getUTCDate()}`;
+}
 
 /** "Oct 12 – 18" or "Sep 29 – Oct 5". */
 export function weekRangeLabel(start, end) {

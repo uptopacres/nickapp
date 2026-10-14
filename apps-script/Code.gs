@@ -9,7 +9,11 @@ const ACTIONS = {
   getConfig: (user) => getConfig_(user),
   getHome: (user) => getHome_(user),
   getEntries: (user) => getEntries_(user),
+  saveEntry: (user, req) => saveEntry_(user, req),
 };
+
+// Expected rejections: the client's problem, not worth an alert email.
+const QUIET_ERRORS = /^(invalid:|bad-token|unknown-action)/;
 
 function doPost(e) {
   let req;
@@ -22,8 +26,16 @@ function doPost(e) {
   try {
     return json_({ ok: true, data: route_(req, e) });
   } catch (err) {
-    console.error(req.action, err && err.stack ? err.stack : err);
-    return json_({ ok: false, error: String((err && err.message) || err) });
+    const message = String((err && err.message) || err);
+    console.error(req.action, (err && err.stack) || err);
+    if (req.action === 'saveEntry' && !QUIET_ERRORS.test(message)) {
+      try {
+        alertSaveFailure_(err, req);
+      } catch (mailErr) {
+        console.error('alert failed', mailErr);
+      }
+    }
+    return json_({ ok: false, error: message });
   }
 }
 

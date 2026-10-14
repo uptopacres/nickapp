@@ -26,3 +26,23 @@ const SCHEMA = {
 
 // Calendar-date columns: read back as 'yyyy-MM-dd' in Eastern.
 const DATE_COLS = { date: true, weekStart: true, lastTouched: true };
+
+// How saveEntry coerces each written column, and the cell format it applies.
+// Text cells are formatted '@' so values like "30-60" or "3/4" never become dates.
+const COLUMN_TYPES = {
+  entryId: 'text', date: 'date', submittedAt: 'datetime', userId: 'text',
+  sleepHours: 'number', rested: 'int', eating: 'text', smoke: 'bool',
+  exerciseDone: 'bool', exerciseType: 'text', exerciseOther: 'text', exerciseDuration: 'text', exerciseFelt: 'text',
+  readDone: 'bool', readMinutes: 'int', readTitle: 'text',
+  sadieDone: 'bool', sadieActivities: 'text', sadieOther: 'text', sadieMinutes: 'text',
+  sarahDone: 'bool', sarahInOut: 'text', sarahNote: 'text',
+  newExpDone: 'bool', newExpText: 'text',
+  friendsDone: 'bool', friendsMode: 'text', friendsWho: 'text', friendsNote: 'text',
+  utaDone: 'bool', utaLevel: 'text', deepWorkDone: 'bool', deepWorkWhat: 'text',
+  dayRating: 'int', note: 'text', photoUrl: 'text',
+  seq: 'int', exercise: 'text', weight: 'number', reps: 'int', sets: 'int',
+};
+
+const CELL_FORMATS = { date: 'yyyy-mm-dd', datetime: 'yyyy-mm-dd hh:mm:ss', text: '@' };
+
+const ALERT_EMAIL = 'nick@uptopacres.com';

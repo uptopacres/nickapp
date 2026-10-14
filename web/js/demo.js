@@ -17,8 +17,26 @@ export const config = {
   modules: ['sleep', 'eating', 'smoke', 'exercise', 'read', 'sadie', 'sarah', 'newexp', 'friends', 'utawork', 'dayrating', 'photo'],
   targets: Object.fromEntries(PRIORITIES.map(p => [p.key, p.target])),
   priorities: PRIORITIES,
-  options: {},
-  lookups: { commonExercises: [], readingList: [] },
+  options: {
+    exerciseTypes: ['run', 'lift', 'bike', 'golf', 'sport', 'other'],
+    exerciseDuration: ['<30', '30-60', '60+'],
+    exerciseFelt: ['easy', 'solid', 'hard'],
+    sadieActivities: ['played', 'read to her', 'outing', 'meal', 'bedtime'],
+    sadieMinutes: ['<30', '30-60', '60+'],
+    eating: ['on track', 'mostly', 'off'],
+    sarahInOut: ['in', 'out'],
+    friendsMode: ['in person', 'call'],
+    utaLevel: ['full', 'half', 'partial'],
+  },
+  lookups: {
+    commonExercises: ['Squat:legs', 'Bench Press:chest', 'Lat Row:back', 'Deadlift:legs', 'Pulldown:back', 'Shoulder Press:shoulders']
+      .map(s => s.split(':')).map(([name, category]) => ({ name, category })),
+    readingList: [
+      { title: 'Slow Productivity', author: 'Cal Newport', status: 'in-progress' },
+      { title: 'Mindset', author: 'Carol S. Dweck', status: 'in-progress' },
+      { title: 'Will', author: 'Will Smith', status: 'in-progress' },
+    ],
+  },
   version: 'demo',
 };
 

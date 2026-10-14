@@ -3,39 +3,44 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#004D40">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="NickApp">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>NickApp</title>
-  <style>
-    body { font: 16px system-ui, sans-serif; margin: 0; padding: 24px; color: #333132; background: #fff; }
-    h1 { color: #004D40; font-weight: 600; }
-    button { font: inherit; padding: 12px 20px; border: 0; border-radius: 6px; background: #004D40; color: #E5EADE; }
-    pre { background: #E5EADE; padding: 12px; border-radius: 6px; white-space: pre-wrap; word-break: break-all; }
-  </style>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="js/pacing.js"></script>
+  <script type="module" src="js/app.js"></script>
 </head>
 <body>
-  <h1>NickApp</h1>
-  <p>Step 1 pipeline check: GitHub Pages → Apps Script.</p>
-  <button id="ping">Ping data service</button>
-  <pre id="out">Not run yet.</pre>
+  <div class="app">
+    <main id="view" tabindex="-1"></main>
+  </div>
 
-  <script type="module">
-    import { API_URL, ENV } from './js/config.js';
-    const out = document.getElementById('out');
-    out.textContent = `Not run yet (env: ${ENV}).`;
-    document.getElementById('ping').addEventListener('click', async () => {
-      out.textContent = 'Pinging…';
-      const t0 = performance.now();
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'ping' }),
-        });
-        const data = await res.json();
-        out.textContent = JSON.stringify(data, null, 2) + `\n\n${Math.round(performance.now() - t0)} ms`;
-      } catch (err) {
-        out.textContent = 'Failed: ' + err;
-      }
-    });
-  </script>
+  <nav class="tabbar" aria-label="Main">
+    <div class="tabbar-inner">
+      <a href="#home" data-tab="home">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="#history" data-tab="history">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2v4M16 2v4M4 10h16"/></svg>
+        <span>History</span>
+      </a>
+      <a href="#entry" data-tab="entry" class="tab-plus" aria-label="Log a day">
+        <span class="plus"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></span>
+      </a>
+      <a href="#trends" data-tab="trends">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 20h18M6 16v-4M11 16V8M16 16v-6M21 16V5"/></svg>
+        <span>Trends</span>
+      </a>
+    </div>
+  </nav>
 </body>
 </html>

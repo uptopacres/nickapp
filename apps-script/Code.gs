@@ -8,6 +8,7 @@
 const ACTIONS = {
   getConfig: (user) => getConfig_(user),
   getHome: (user) => getHome_(user),
+  getEntries: (user) => getEntries_(user),
 };
 
 function doPost(e) {

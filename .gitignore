@@ -7,3 +7,9 @@
 Thumbs.db
 .vscode/
 node_modules/
+
+# Copied from apps-script/Pacing.js at build time (tools/serve.js, Pages workflow)
+web/js/pacing.js
+
+# Local screenshots
+.shots/

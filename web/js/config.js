@@ -8,3 +8,6 @@ const URLS = {
 
 export const ENV = new URLSearchParams(location.search).get('env') === 'test' ? 'test' : 'live';
 export const API_URL = URLS[ENV];
+
+// Hosted Trends page (second, Google-login deployment). Set once it exists.
+export const TRENDS_URL = null;

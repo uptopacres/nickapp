@@ -37,7 +37,7 @@ var NickPacing = (function () {
     newexp: e => isTrue(e.newExpDone),
     friends: e => isTrue(e.friendsDone),
     deepwork: e => isTrue(e.deepWorkDone),
-    eating: e => e.eating === 'on track',
+    eating: e => e.eating === 'on track' || e.eating === 'mostly', // only "off" misses
     sleep: e => e.sleep === '7-8' || e.sleep === '8+', // 7+ hours
     smoke: e => !isTrue(e.smoke), // a logged smoke-free day; unlogged days earn nothing
   };

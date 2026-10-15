@@ -5,7 +5,7 @@
  * that hold data are left in place (the app ignores them) and logged.
  */
 
-const SCHEMA_VERSION = 3;
+const SCHEMA_VERSION = 4;
 
 function ensureSchema_() {
   const props = PropertiesService.getScriptProperties();
@@ -21,6 +21,11 @@ function ensureSchema_() {
     if (v < 3) {
       migrateV3_();
       v = 3;
+    }
+    if (v < 4) {
+      // Eating "mostly" now counts as a hit: rescore every closed week.
+      buildSummaries_();
+      v = 4;
     }
     props.setProperty('SCHEMA_VERSION', String(v));
   } finally {

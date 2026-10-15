@@ -122,7 +122,7 @@ test('weekScore: closed week totals, zero for an unlogged week', () => {
   assert.equal(empty.targetsHit, 0);
 });
 
-test('eating counts only on track; sleep needs the 7-8 or 8+ bucket', () => {
+test('eating: on track and mostly count, off misses; sleep needs 7-8 or 8+', () => {
   const entries = [
     day('2026-10-12', { eating: 'on track', sleep: '7-8' }),
     day('2026-10-13', { eating: 'mostly', sleep: '<7' }),
@@ -130,7 +130,7 @@ test('eating counts only on track; sleep needs the 7-8 or 8+ bucket', () => {
     day('2026-10-15', { eating: 'on track', sleep: '8+' }),
   ];
   const h = P.computeHome(entries, PRIORITIES, '2026-10-15');
-  assert.equal(row(h, 'eating').hits, 2);
+  assert.equal(row(h, 'eating').hits, 3); // on track, mostly, on track (off and blank miss)
   assert.equal(row(h, 'sleep').hits, 2);
 });
 

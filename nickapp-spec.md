@@ -529,3 +529,5 @@ Flag changes on these five and this is build-ready.
     but with slack (open days > hits still needed) shows **in reach** in the brand
     gray-green `#D5DCCB`; **at risk** (Peachy) now means no slack left, every open day
     has to count. Hero still counts hit + on pace.
+14. **Eating:** "on track" and "mostly" both count as a hit day; only "off" misses
+    (supersedes §12.2). Closed weeks were rescored (schema v4).

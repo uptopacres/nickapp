@@ -43,6 +43,7 @@ function route_(req, e) {
   if (req.action === 'ping') return { serverTime: new Date().toISOString() };
   const handler = ACTIONS[req.action];
   if (!handler) throw new Error('unknown-action');
+  ensureSchema_();
   const user = userFromToken_(req.token || (e && e.parameter && e.parameter.u));
   return handler(user, req);
 }

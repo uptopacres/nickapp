@@ -6,10 +6,10 @@ const TZ = 'America/New_York';
 const SCHEMA = {
   DailyLog: [
     'entryId', 'date', 'submittedAt', 'userId',
-    'sleepHours', 'rested', 'eating', 'smoke',
-    'exerciseDone', 'exerciseType', 'exerciseOther', 'exerciseDuration', 'exerciseFelt',
+    'sleep', 'eating', 'smoke',
+    'exerciseDone', 'exerciseType', 'exerciseOther', 'exerciseDuration',
     'readDone', 'readMinutes', 'readTitle',
-    'sadieDone', 'sadieActivities', 'sadieOther', 'sadieMinutes',
+    'sadieDone', 'sadieMemory',
     'sarahDone', 'sarahInOut', 'sarahNote',
     'newExpDone', 'newExpText',
     'friendsDone', 'friendsMode', 'friendsWho', 'friendsNote',
@@ -31,10 +31,10 @@ const DATE_COLS = { date: true, weekStart: true, lastTouched: true };
 // Text cells are formatted '@' so values like "30-60" or "3/4" never become dates.
 const COLUMN_TYPES = {
   entryId: 'text', date: 'date', submittedAt: 'datetime', userId: 'text',
-  sleepHours: 'number', rested: 'int', eating: 'text', smoke: 'bool',
-  exerciseDone: 'bool', exerciseType: 'text', exerciseOther: 'text', exerciseDuration: 'text', exerciseFelt: 'text',
+  sleep: 'text', eating: 'text', smoke: 'bool',
+  exerciseDone: 'bool', exerciseType: 'text', exerciseOther: 'text', exerciseDuration: 'text',
   readDone: 'bool', readMinutes: 'int', readTitle: 'text',
-  sadieDone: 'bool', sadieActivities: 'text', sadieOther: 'text', sadieMinutes: 'text',
+  sadieDone: 'bool', sadieMemory: 'text',
   sarahDone: 'bool', sarahInOut: 'text', sarahNote: 'text',
   newExpDone: 'bool', newExpText: 'text',
   friendsDone: 'bool', friendsMode: 'text', friendsWho: 'text', friendsNote: 'text',

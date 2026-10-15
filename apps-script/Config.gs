@@ -9,11 +9,9 @@ const DEFAULT_MODULES = [
 const MODULE_FOR_PRIORITY = { deepwork: 'utawork' };
 
 const OPTIONS = {
-  exerciseTypes: ['run', 'lift', 'bike', 'golf', 'sport', 'other'],
+  sleep: ['<7', '7-8', '8+'],
+  exerciseTypes: ['run/walk', 'lift', 'bike', 'golf', 'sport', 'other'],
   exerciseDuration: ['<30', '30-60', '60+'],
-  exerciseFelt: ['easy', 'solid', 'hard'],
-  sadieActivities: ['played', 'read to her', 'outing', 'meal', 'bedtime'],
-  sadieMinutes: ['<30', '30-60', '60+'],
   eating: ['on track', 'mostly', 'off'],
   sarahInOut: ['in', 'out'],
   friendsMode: ['in person', 'call'],

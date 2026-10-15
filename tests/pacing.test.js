@@ -87,15 +87,16 @@ test('smoke: any smoke day breaks the week', () => {
   assert.equal(r.requiredByToday, 0);
 });
 
-test('eating counts only on track; sleep needs 7+', () => {
+test('eating counts only on track; sleep needs the 7-8 or 8+ bucket', () => {
   const entries = [
-    day('2026-10-12', { eating: 'on track', sleepHours: 7 }),
-    day('2026-10-13', { eating: 'mostly', sleepHours: 6.5 }),
-    day('2026-10-14', { eating: 'off', sleepHours: '' }),
+    day('2026-10-12', { eating: 'on track', sleep: '7-8' }),
+    day('2026-10-13', { eating: 'mostly', sleep: '<7' }),
+    day('2026-10-14', { eating: 'off', sleep: '' }),
+    day('2026-10-15', { eating: 'on track', sleep: '8+' }),
   ];
-  const h = P.computeHome(entries, PRIORITIES, '2026-10-14');
-  assert.equal(row(h, 'eating').hits, 1);
-  assert.equal(row(h, 'sleep').hits, 1);
+  const h = P.computeHome(entries, PRIORITIES, '2026-10-15');
+  assert.equal(row(h, 'eating').hits, 2);
+  assert.equal(row(h, 'sleep').hits, 2);
 });
 
 test('streak through today, or through yesterday when today unlogged; gaps break it', () => {

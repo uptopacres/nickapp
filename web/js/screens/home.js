@@ -94,11 +94,6 @@ export function renderHome(root, home, { offline = false, demo = false, pending 
       </div>
     </section>
 
-    ${home.todayLogged ? '' : `
-    <a class="prompt" href="#entry">
-      <span>Tonight not logged yet</span><span class="go">Log it →</span>
-    </a>`}
-
     <section class="card card-list" aria-label="Priorities">
       <ul class="plist inner">${home.priorities.map(p => priorityRow(p, shownFor(p))).join('')}</ul>
     </section>`;

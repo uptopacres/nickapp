@@ -5,15 +5,15 @@ import { dayLabel } from '../dates.js';
 import { resizePhoto } from '../photo.js';
 
 const DONE_FIELDS = ['exerciseDone', 'readDone', 'sadieDone', 'sarahDone', 'newExpDone', 'friendsDone', 'utaDone'];
-const NUMERIC_FIELDS = ['sleepHours', 'rested', 'readMinutes', 'dayRating'];
+const NUMERIC_FIELDS = ['readMinutes', 'dayRating'];
 
 function blank(date) {
   return {
     date,
-    sleepHours: '', rested: '', eating: '', smoke: false,
-    exerciseDone: false, exerciseType: '', exerciseOther: '', exerciseDuration: '', exerciseFelt: '',
+    sleep: '', eating: '', smoke: false,
+    exerciseDone: false, exerciseType: '', exerciseOther: '', exerciseDuration: '',
     readDone: false, readMinutes: '', readTitle: '',
-    sadieDone: false, sadieActivities: [], sadieOther: '', sadieMinutes: '',
+    sadieDone: false, sadieMemory: '',
     sarahDone: false, sarahInOut: '', sarahNote: '',
     newExpDone: false, newExpText: '',
     friendsDone: false, friendsMode: '', friendsWho: '', friendsNote: '',
@@ -30,8 +30,6 @@ function fromEntry(e) {
   }
   for (const k of [...DONE_FIELDS, 'smoke', 'deepWorkDone']) s[k] = NickPacing.isTrue(e[k]);
   for (const k of NUMERIC_FIELDS) s[k] = e[k] === '' || e[k] == null ? '' : String(e[k]);
-  s.sadieActivities = String(e.sadieActivities || '').split('|').filter(Boolean);
-  if (e.sadieOther) s.sadieActivities.push('other');
   s.lifts = (e.lifts || []).map(l => ({
     exercise: l.exercise || '',
     exerciseOther: l.exerciseOther || '',
@@ -107,9 +105,7 @@ export function renderEntry(root, ctx) {
 
       <section class="card form-card">
         ${field('Date', `<input class="input input-date" type="date" id="f-date" data-field="date" max="${today}" value="${s.date}" required>`, { forId: 'f-date' })}
-        ${mods.has('sleep') ? `
-          ${field('Sleep (hours)', `<input class="input input-short" type="number" id="f-sleepHours" inputmode="decimal" step="0.5" min="0" max="24" data-field="sleepHours" value="${esc(s.sleepHours)}">`, { forId: 'f-sleepHours' })}
-          ${field('Rested', seg('rested', ['1', '2', '3', '4', '5']))}` : ''}
+        ${mods.has('sleep') ? field('Sleep (hours)', chips('sleep', opts.sleep || ['<7', '7-8', '8+'])) : ''}
         ${mods.has('eating') ? field('Eating', seg('eating', opts.eating)) : ''}
         ${mods.has('smoke') ? field('Smoke', seg('smoke', ['no', 'yes'], { bool: true, labels: ['No', 'Yes'] })) : ''}
       </section>
@@ -123,7 +119,6 @@ export function renderEntry(root, ctx) {
         ${field('Type', chips('exerciseType', opts.exerciseTypes))}
         ${field('Describe it', text('exerciseOther', { placeholder: 'What did you do?' }), { show: 'exerciseType=other', forId: 'f-exerciseOther' })}
         ${field('Duration (min)', chips('exerciseDuration', opts.exerciseDuration))}
-        ${field('Felt', seg('exerciseFelt', opts.exerciseFelt))}
         ${field('Lifts', '<div data-lifts></div>', { show: 'exerciseType=lift' })}`)}
 
       ${prio('read', 'readDone', 'Read', `
@@ -136,9 +131,7 @@ export function renderEntry(root, ctx) {
         ${field('Title', '<div data-picker="readTitle"></div>')}`)}
 
       ${prio('sadie', 'sadieDone', 'Sadie', `
-        ${field('What', chips('sadieActivities', [...(opts.sadieActivities || []), 'other'], { multi: true }))}
-        ${field('Describe the other', text('sadieOther'), { show: 'sadieActivities~other', forId: 'f-sadieOther' })}
-        ${field('Rough minutes', chips('sadieMinutes', opts.sadieMinutes || opts.exerciseDuration))}`)}
+        ${field('A memory or event', `<textarea class="input" id="f-sadieMemory" data-field="sadieMemory" rows="3" maxlength="500" placeholder="What happened with Sadie today?">${esc(s.sadieMemory)}</textarea>`, { forId: 'f-sadieMemory' })}`)}
 
       ${prio('sarah', 'sarahDone', 'Sarah', `
         ${field('In or out', seg('sarahInOut', opts.sarahInOut))}
@@ -379,11 +372,7 @@ export function renderEntry(root, ctx) {
     const errs = [];
     if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date)) errs.push(['date', 'Pick a date.']);
     else if (s.date > today) errs.push(['date', "You can't log a day that hasn't happened yet."]);
-    if (s.sleepHours !== '' && !(Number(s.sleepHours) >= 0 && Number(s.sleepHours) <= 24)) {
-      errs.push(['sleepHours', 'Sleep should be between 0 and 24 hours.']);
-    }
     if (s.exerciseDone && s.exerciseType === 'other' && !s.exerciseOther.trim()) errs.push(['exerciseOther', 'Describe the exercise.']);
-    if (s.sadieDone && s.sadieActivities.includes('other') && !s.sadieOther.trim()) errs.push(['sadieOther', 'Describe the other Sadie activity.']);
     if (s.utaDone && s.deepWorkDone && !s.deepWorkWhat.trim()) errs.push(['deepWorkWhat', 'Say what the deep work block was.']);
     return errs;
   }
@@ -392,30 +381,24 @@ export function renderEntry(root, ctx) {
     const on = (flag, v) => (flag ? v : '');
     const num = v => (v === '' || v == null ? '' : Number(v));
     const userId = config.user.id;
-    const acts = s.sadieActivities.filter(a => a !== 'other');
-    const sadieOther = s.sadieActivities.includes('other');
     const deep = s.utaDone && s.deepWorkDone;
     const lifting = s.exerciseDone && s.exerciseType === 'lift';
     const entry = {
       entryId: `${userId}_${s.date}`,
       date: s.date,
       userId,
-      sleepHours: num(s.sleepHours),
-      rested: num(s.rested),
+      sleep: s.sleep,
       eating: s.eating,
       smoke: !!s.smoke,
       exerciseDone: s.exerciseDone,
       exerciseType: on(s.exerciseDone, s.exerciseType),
       exerciseOther: on(s.exerciseDone && s.exerciseType === 'other', s.exerciseOther.trim()),
       exerciseDuration: on(s.exerciseDone, s.exerciseDuration),
-      exerciseFelt: on(s.exerciseDone, s.exerciseFelt),
       readDone: s.readDone,
       readMinutes: on(s.readDone, num(s.readMinutes)),
       readTitle: on(s.readDone, s.readTitle.trim()),
       sadieDone: s.sadieDone,
-      sadieActivities: on(s.sadieDone, acts.join('|')),
-      sadieOther: on(s.sadieDone && sadieOther, s.sadieOther.trim()),
-      sadieMinutes: on(s.sadieDone, s.sadieMinutes),
+      sadieMemory: on(s.sadieDone, s.sadieMemory.trim()),
       sarahDone: s.sarahDone,
       sarahInOut: on(s.sarahDone, s.sarahInOut),
       sarahNote: on(s.sarahDone, s.sarahNote.trim()),

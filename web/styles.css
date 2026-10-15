@@ -165,25 +165,6 @@ button { font: inherit; color: inherit; }
 .dot.today { color: var(--moss); font-weight: 600; }
 .dot.today i { box-shadow: 0 0 0 2px var(--cream), 0 0 0 3px var(--moss); }
 
-/* ---------- Prompt ---------- */
-
-.prompt {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 14px;
-  padding: 16px 18px;
-  border: 1px solid var(--moss);
-  border-radius: var(--radius);
-  background: var(--white);
-  color: var(--moss);
-  font-weight: 600;
-  text-decoration: none;
-}
-.prompt:hover { background: var(--hover); }
-.prompt .go { font-family: var(--label); font-size: .875rem; white-space: nowrap; }
-
 /* ---------- Priority rows, colored by pace status ---------- */
 
 .s-hit      { --status-color: var(--clover);     --status-ink: var(--white); }

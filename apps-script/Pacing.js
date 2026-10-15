@@ -38,7 +38,7 @@ var NickPacing = (function () {
     friends: e => isTrue(e.friendsDone),
     deepwork: e => isTrue(e.deepWorkDone),
     eating: e => e.eating === 'on track',
-    sleep: e => Number(e.sleepHours) >= 7,
+    sleep: e => e.sleep === '7-8' || e.sleep === '8+', // 7+ hours
     smoke: e => isTrue(e.smoke),
   };
 

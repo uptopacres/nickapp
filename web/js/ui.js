@@ -7,10 +7,9 @@ export function esc(v) {
   return String(v ?? '').replace(/[&<>"']/g, c => ESC[c]);
 }
 
-/** "on track" → "On track" for display; stored values stay as configured. */
+/** "on track" → "On track", "run/walk" → "Run/Walk" for display; stored values stay as configured. */
 export function cap(s) {
-  s = String(s ?? '');
-  return s.charAt(0).toUpperCase() + s.slice(1);
+  return String(s ?? '').replace(/(^|\/)(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
 }
 
 let toastTimer;

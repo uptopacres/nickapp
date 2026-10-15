@@ -55,6 +55,12 @@ function setup() {
     active: true,
   }]);
 
+  // A fresh Sheet is already at the current schema.
+  const props = PropertiesService.getScriptProperties();
+  if (!props.getProperty('SCHEMA_VERSION') && sheet_('DailyLog').getLastRow() <= 1) {
+    props.setProperty('SCHEMA_VERSION', String(SCHEMA_VERSION));
+  }
+
   const folder = ensurePhotoFolder_(ss);
   console.log('Photo folder: ' + folder.getUrl());
   showMyUrl();

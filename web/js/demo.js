@@ -18,11 +18,9 @@ export const config = {
   targets: Object.fromEntries(PRIORITIES.map(p => [p.key, p.target])),
   priorities: PRIORITIES,
   options: {
-    exerciseTypes: ['run', 'lift', 'bike', 'golf', 'sport', 'other'],
+    sleep: ['<7', '7-8', '8+'],
+    exerciseTypes: ['run/walk', 'lift', 'bike', 'golf', 'sport', 'other'],
     exerciseDuration: ['<30', '30-60', '60+'],
-    exerciseFelt: ['easy', 'solid', 'hard'],
-    sadieActivities: ['played', 'read to her', 'outing', 'meal', 'bedtime'],
-    sadieMinutes: ['<30', '30-60', '60+'],
     eating: ['on track', 'mostly', 'off'],
     sarahInOut: ['in', 'out'],
     friendsMode: ['in person', 'call'],
@@ -59,7 +57,7 @@ export function entries(today) {
       friendsDone: k === 4,
       deepWorkDone: k % 3 === 0,
       eating: k % 3 ? 'on track' : 'mostly',
-      sleepHours: k % 2 ? 7.5 : 6.5,
+      sleep: k % 2 ? '7-8' : '<7',
       smoke: false,
     });
   }

@@ -499,3 +499,13 @@ Flag changes on these five and this is build-ready.
 7. **Smoke status:** adds `broken` (Beet `#D14549`) as a status distinct from `missed`.
 8. **Seed lookups:** CommonExercises = Squat, Bench Press, Lat Row, Deadlift, Pulldown,
    Shoulder Press. ReadingList = Slow Productivity, Mindset, Will (all in-progress).
+9. **Form edits (2026-10-14, after first use):**
+   - Home drops the "Tonight not logged yet" prompt; the raised + is the entry point.
+   - Sleep is a pill choice `<7` / `7-8` / `8+` stored in `sleep` (replaces `sleepHours`);
+     the Rested 1-5 question is removed. Sleep hit-day = `7-8` or `8+` (still 7+ hours).
+   - Exercise drops "Felt"; the run type is `run/walk` (shown "Run/Walk").
+   - Sadie is a single write-in "memory or event" stored in `sadieMemory` (replaces
+     `sadieActivities`, `sadieOther`, `sadieMinutes`).
+   - Sheets migrate automatically (`apps-script/Migrate.gs`, schema version 2) on the
+     first request after deploy: headers renamed, old sleep hours converted to buckets,
+     `run` → `run/walk`, removed columns deleted only if empty.

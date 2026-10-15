@@ -49,11 +49,68 @@ function playFlips(root, flips) {
   }));
 }
 
+// ---------- Week strip: the last completed weeks behind the hero, same unit ----------
+
+// 0-5 Peachy, 6-8 Chartreuse, 9-10 Clover out of 10, scaled if the tracked count changes.
+function band(w) {
+  const r = w.tracked ? w.targetsHit / w.tracked : 0;
+  return r >= 0.9 ? 'band-high' : r >= 0.6 ? 'band-mid' : 'band-low';
+}
+
+const weekLabel = w => weekRangeLabel(w.weekStart, NickPacing.addDays(w.weekStart, 6));
+
+function weekStrip(weeks) {
+  if (!weeks?.length) return '';
+  const chevs = weeks
+    .map((w, i) => `
+      <button type="button" class="chev ${band(w)}" data-week="${i}" aria-expanded="false"
+        aria-label="Week of ${weekLabel(w)}: ${w.targetsHit} of ${w.tracked} targets hit">${w.targetsHit}</button>`)
+    .join('');
+  return `
+    <section class="weeks" aria-label="Last ${weeks.length} completed ${weeks.length === 1 ? 'week' : 'weeks'}">
+      <div class="chevs">${chevs}</div>
+      <div class="week-detail"><div class="week-detail-inner"></div></div>
+    </section>`;
+}
+
+function weekDetail(w) {
+  const rows = w.priorities
+    .map(p => `<li class="${p.status === 'hit' ? 'is-hit' : ''}"><span>${esc(p.label)}</span><span>${p.hits}/${p.target}</span></li>`)
+    .join('');
+  return `
+    <div class="week-detail-body">
+      <div class="week-detail-head">
+        <span class="label">Week of ${weekLabel(w)}</span>
+        <span class="label">${w.targetsHit}/${w.tracked} hit · logged ${w.daysLogged}/7</span>
+      </div>
+      <ul class="week-list">${rows}</ul>
+    </div>`;
+}
+
+/** Tap a chevron to open that week's detail; tap it again (or another) to close/switch. */
+function wireStrip(root, weeks) {
+  const box = root.querySelector('.weeks');
+  if (!box) return;
+  const panel = box.querySelector('.week-detail');
+  box.querySelector('.chevs').addEventListener('click', e => {
+    const btn = e.target.closest('.chev');
+    if (!btn) return;
+    const wasOpen = btn.getAttribute('aria-expanded') === 'true';
+    box.querySelectorAll('.chev').forEach(c => c.setAttribute('aria-expanded', 'false'));
+    if (!wasOpen) {
+      panel.firstElementChild.innerHTML = weekDetail(weeks[Number(btn.dataset.week)]);
+      btn.setAttribute('aria-expanded', 'true');
+    }
+    box.classList.toggle('has-open', !wasOpen);
+    panel.classList.toggle('open', !wasOpen);
+  });
+}
+
 function streakText(n) {
   return n > 0 ? `${n}-day streak` : 'No streak yet';
 }
 
-export function renderHome(root, home, { offline = false, demo = false, pending = 0, from = null } = {}) {
+export function renderHome(root, home, { offline = false, demo = false, pending = 0, from = null, weeks = [] } = {}) {
   const before = new Map((from?.priorities || []).map(p => [p.key, p]));
   const flips = home.priorities
     .map(to => ({ from: before.get(to.key), to }))
@@ -81,6 +138,8 @@ export function renderHome(root, home, { offline = false, demo = false, pending 
       </div>
     </header>
 
+    ${weekStrip(weeks)}
+
     <section class="card hero" aria-label="Weekly summary">
       <div class="hero-num num" aria-label="${home.onPaceCount} of ${home.trackedCount} targets on pace">
         <span>${home.onPaceCount}</span><span class="slash">/</span><span>${home.trackedCount}</span>
@@ -98,5 +157,6 @@ export function renderHome(root, home, { offline = false, demo = false, pending 
       <ul class="plist inner">${home.priorities.map(p => priorityRow(p, shownFor(p))).join('')}</ul>
     </section>`;
 
+  wireStrip(root, weeks);
   playFlips(root, flips);
 }

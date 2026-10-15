@@ -78,17 +78,26 @@ function upsertRow_(name, keyHeader, obj) {
   range.setValues([headers.map((h, i) => (h in obj ? cellIn_(obj[h]) : current[i]))]);
 }
 
-/** Deletes every row whose `header` equals `value` (bottom-up, in contiguous runs). */
+/** Deletes every row whose `header` equals `value`. */
 function deleteRowsWhere_(name, header, value) {
+  deleteRows_(name, r => String(r[header]) === String(value));
+}
+
+/** Deletes every row for which match(rowObject) is true (bottom-up, in contiguous runs). */
+function deleteRows_(name, match) {
   const sh = sheet_(name);
-  const col = headers_(sh).indexOf(header);
   const last = sh.getLastRow();
-  if (col < 0 || last < 2) return;
-  const vals = sh.getRange(2, col + 1, last - 1, 1).getValues();
-  for (let i = vals.length - 1; i >= 0; ) {
-    if (String(vals[i][0]) !== String(value)) { i--; continue; }
+  if (last < 2) return;
+  const headers = headers_(sh);
+  const hit = sh.getRange(2, 1, last - 1, headers.length).getValues().map(r => {
+    const o = {};
+    headers.forEach((h, i) => (o[h] = cellOut_(h, r[i])));
+    return match(o);
+  });
+  for (let i = hit.length - 1; i >= 0; ) {
+    if (!hit[i]) { i--; continue; }
     let start = i;
-    while (start > 0 && String(vals[start - 1][0]) === String(value)) start--;
+    while (start > 0 && hit[start - 1]) start--;
     sh.deleteRows(start + 2, i - start + 1);
     i = start - 1;
   }

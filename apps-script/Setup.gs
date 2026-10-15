@@ -10,14 +10,14 @@ const PAGES_URL = 'https://uptopacres.github.io/nickapp/';
 const TARGET_SEED = [
   ['exercise', 'Exercise', 'max', 4],
   ['read', 'Read', 'max', 5],
-  ['sadie', 'Sadie', 'max', 7],
+  ['sadie', 'Sadie', 'max', 6],
   ['sarah', 'Sarah', 'max', 1],
   ['newexp', 'New experience', 'max', 1],
   ['friends', 'Friends', 'max', 2],
   ['deepwork', 'Deep work', 'max', 3],
   ['eating', 'Eating', 'max', 5],
   ['sleep', 'Sleep', 'max', 5],
-  ['smoke', 'Smoke', 'min', 0],
+  ['smoke', 'Smoke', 'max', 6], // logged smoke-free days
 ].map(([key, label, direction, weeklyTarget]) => ({ key, label, direction, weeklyTarget }));
 
 const EXERCISE_SEED = [
@@ -60,6 +60,8 @@ function setup() {
   if (!props.getProperty('SCHEMA_VERSION') && sheet_('DailyLog').getLastRow() <= 1) {
     props.setProperty('SCHEMA_VERSION', String(SCHEMA_VERSION));
   }
+
+  installTriggers_();
 
   const folder = ensurePhotoFolder_(ss);
   console.log('Photo folder: ' + folder.getUrl());

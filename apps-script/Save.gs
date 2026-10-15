@@ -64,6 +64,9 @@ function saveEntry_(user, req) {
     upsertRow_('DailyLog', 'entryId', row);
     deleteRowsWhere_('LiftLog', 'entryId', entryId);
     appendRows_('LiftLog', lifts.map(l => Object.assign({ entryId: entryId, date: date, userId: user.userId }, l)));
+    // Backfill into a closed week: refresh that week's summary now, not tonight.
+    const weekStart = NickPacing.weekStartOf(date);
+    if (weekStart < NickPacing.weekStartOf(todayEt_())) summarizeWeek_(user, weekStart);
     SpreadsheetApp.flush();
   } finally {
     lock.releaseLock();

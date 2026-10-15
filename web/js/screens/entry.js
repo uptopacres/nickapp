@@ -462,8 +462,44 @@ export function renderEntry(root, ctx) {
 
   // ---------- wiring ----------
 
+  function step(btn) {
+    const f = btn.dataset.field;
+    s[f] = String(Math.max(0, (Number(s[f]) || 0) + Number(btn.dataset.delta)));
+    $(`input[data-field="${f}"]`).value = s[f];
+  }
+
+  // Steppers act on pointerdown (no tap delay, nothing for double-tap zoom to grab) and
+  // repeat while held. Capture keeps the hold alive if the finger drifts; a scroll that
+  // starts on the button cancels the pointer, which ends the hold.
+  let hold = null;
+  const endHold = () => {
+    if (!hold) return;
+    clearTimeout(hold.delay);
+    clearInterval(hold.repeat);
+    hold = null;
+  };
+
+  function wireSteppers() {
+    form.addEventListener('pointerdown', e => {
+      const btn = e.target.closest('[data-act="step"]');
+      if (!btn || e.button > 0) return;
+      e.preventDefault(); // no focus jump or text selection
+      endHold();
+      step(btn);
+      hold = { delay: setTimeout(() => hold && (hold.repeat = setInterval(() => step(btn), 90)), 450) };
+      btn.setPointerCapture?.(e.pointerId);
+      btn.addEventListener('lostpointercapture', endHold, { once: true });
+      btn.addEventListener('pointerup', endHold, { once: true });
+      btn.addEventListener('pointercancel', endHold, { once: true });
+    });
+    form.addEventListener('contextmenu', e => {
+      if (e.target.closest('[data-act="step"]')) e.preventDefault(); // long-press menu
+    });
+  }
+
   function wire() {
     form.addEventListener('submit', submit);
+    wireSteppers();
 
     form.addEventListener('click', e => {
       const btn = e.target.closest('button');
@@ -478,12 +514,10 @@ export function renderEntry(root, ctx) {
       switch (act) {
         case 'toggle':
           return toggle(btn.dataset.done);
-        case 'step': {
-          const n = Math.max(0, (Number(s[f]) || 0) + Number(btn.dataset.delta));
-          s[f] = String(n);
-          $(`input[data-field="${f}"]`).value = s[f];
+        case 'step':
+          // Pointer taps were handled on pointerdown; this is keyboard (Enter/Space).
+          if (e.detail === 0) step(btn);
           return;
-        }
         case 'pick':
           s[f] = btn.dataset.value;
           pickerMode[f] = 'search';

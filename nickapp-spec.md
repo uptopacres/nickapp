@@ -509,3 +509,19 @@ Flag changes on these five and this is build-ready.
    - Sheets migrate automatically (`apps-script/Migrate.gs`, schema version 2) on the
      first request after deploy: headers renamed, old sleep hours converted to buckets,
      `run` → `run/walk`, removed columns deleted only if empty.
+10. **Targets (2026-10-14):** Smoke is now a normal max target: 6 logged smoke-free days
+    a week (X/6); an unlogged day earns no credit. Sadie's target is 6. The `broken`
+    status remains for any future min-direction priority.
+11. **Home week strip:** the last 5 completed weeks sit above the hero as nested
+    chevrons (`clip-path: polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%, 16% 50%)`),
+    oldest left, each labelled with that week's targets hit out of tracked (the hero's
+    unit). Colors: 0-5 Peachy, 6-8 Chartreuse, 9-10 Clover. Tap for per-priority detail.
+    Fewer than 5 weeks of history shows only what exists. A week with nothing logged
+    scores 0.
+    - New `WeekSummary` tab (`userId, weekStart, targetsHit, tracked, daysLogged,
+      computedAt`), alongside per-priority `WeekStats`, both written by `buildSummaries`
+      (nightly trigger ~3am ET) and refreshed for a closed week when a backfill save
+      lands in it. `getWeeks` serves the last 5 and fills last week on demand if the
+      nightly run hasn't happened yet. The phone caches it, so the strip renders offline.
+12. **Steppers:** act on touch-down and repeat while held; the installed app disables
+    page zoom (`maximum-scale=1, user-scalable=no`, `touch-action: manipulation`).

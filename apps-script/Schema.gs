@@ -22,6 +22,8 @@ const SCHEMA = {
   Targets: ['key', 'label', 'direction', 'weeklyTarget'],
   Users: ['token', 'userId', 'name', 'displayName', 'modules', 'active'],
   WeekStats: ['userId', 'weekStart', 'priorityKey', 'hits', 'target', 'rate', 'status'],
+  // One row per user-week: the Home week strip reads one small number per week.
+  WeekSummary: ['userId', 'weekStart', 'targetsHit', 'tracked', 'daysLogged', 'computedAt'],
 };
 
 // Calendar-date columns: read back as 'yyyy-MM-dd' in Eastern.
@@ -41,6 +43,8 @@ const COLUMN_TYPES = {
   utaDone: 'bool', utaLevel: 'text', deepWorkDone: 'bool', deepWorkWhat: 'text',
   dayRating: 'int', note: 'text', photoUrl: 'text',
   seq: 'int', exercise: 'text', weight: 'number', reps: 'int', sets: 'int',
+  weekStart: 'date', priorityKey: 'text', hits: 'int', target: 'int', rate: 'number', status: 'text',
+  targetsHit: 'int', tracked: 'int', daysLogged: 'int', computedAt: 'datetime',
 };
 
 const CELL_FORMATS = { date: 'yyyy-mm-dd', datetime: 'yyyy-mm-dd hh:mm:ss', text: '@' };

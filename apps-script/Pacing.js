@@ -39,7 +39,7 @@ var NickPacing = (function () {
     deepwork: e => isTrue(e.deepWorkDone),
     eating: e => e.eating === 'on track',
     sleep: e => e.sleep === '7-8' || e.sleep === '8+', // 7+ hours
-    smoke: e => isTrue(e.smoke),
+    smoke: e => !isTrue(e.smoke), // a logged smoke-free day; unlogged days earn nothing
   };
 
   function requiredBy(target, paceDays) {
@@ -115,7 +115,34 @@ var NickPacing = (function () {
     };
   }
 
-  return { TIMEZONE, addDays, dayIndex, weekStartOf, isTrue, HIT_DAY, requiredBy, paceStatus, computeHome };
+  /**
+   * Final score for one closed week (WeekStats / WeekSummary rows, the Home week strip):
+   * targetsHit = priorities that ended the week "hit", out of `tracked`. A week with
+   * nothing logged scores 0.
+   */
+  function weekScore(entries, priorities, weekStart) {
+    const weekEnd = addDays(weekStart, 6);
+    const byDate = {};
+    entries.forEach(e => {
+      if (e && e.date >= weekStart && e.date <= weekEnd) byDate[e.date] = e;
+    });
+    const week = Object.keys(byDate).map(d => byDate[d]);
+    const rows = priorities.map(p => {
+      const test = HIT_DAY[p.key];
+      const hits = test ? week.filter(test).length : 0;
+      const direction = p.direction === 'min' ? 'min' : 'max';
+      return { key: p.key, label: p.label, direction, target: p.target, hits, status: paceStatus({ direction, target: p.target, hits, closed: true }) };
+    });
+    return {
+      weekStart,
+      daysLogged: week.length,
+      tracked: rows.length,
+      targetsHit: week.length ? rows.filter(r => r.status === 'hit').length : 0,
+      priorities: rows,
+    };
+  }
+
+  return { TIMEZONE, addDays, dayIndex, weekStartOf, isTrue, HIT_DAY, requiredBy, paceStatus, computeHome, weekScore };
 })();
 
 if (typeof module !== 'undefined' && module.exports) module.exports = NickPacing;

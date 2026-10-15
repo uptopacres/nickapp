@@ -5,7 +5,7 @@
  * that hold data are left in place (the app ignores them) and logged.
  */
 
-const SCHEMA_VERSION = 2;
+const SCHEMA_VERSION = 3;
 
 function ensureSchema_() {
   const props = PropertiesService.getScriptProperties();
@@ -17,6 +17,10 @@ function ensureSchema_() {
     if (v < 2) {
       migrateV2_();
       v = 2;
+    }
+    if (v < 3) {
+      migrateV3_();
+      v = 3;
     }
     props.setProperty('SCHEMA_VERSION', String(v));
   } finally {
@@ -33,6 +37,29 @@ function migrateV2_() {
   mapColumn_(sh, 'exerciseType', v => (v === 'run' ? 'run/walk' : v));
   ['rested', 'exerciseFelt', 'sadieActivities', 'sadieMinutes'].forEach(h => dropColumnIfEmpty_(sh, h));
   ensureTab_(SpreadsheetApp.getActive(), 'DailyLog', SCHEMA.DailyLog);
+}
+
+/**
+ * 2026-10-14 week strip + targets: WeekSummary tab, nightly trigger, first rollup.
+ * Smoke becomes "6 logged smoke-free days" (max) and Sadie 6, only where the Targets
+ * rows still hold the old defaults (a hand edit in the Sheet wins).
+ */
+function migrateV3_() {
+  ensureTab_(SpreadsheetApp.getActive(), 'WeekSummary', SCHEMA.WeekSummary);
+  updateTarget_('smoke', t => t.direction === 'min' && Number(t.weeklyTarget) === 0, { direction: 'max', weeklyTarget: 6 });
+  updateTarget_('sadie', t => Number(t.weeklyTarget) === 7, { weeklyTarget: 6 });
+  try {
+    installTriggers_();
+  } catch (err) {
+    // getWeeks and saveEntry keep summaries current without it; setup() installs it too.
+    console.warn('Could not install the nightly trigger from a web request:', err);
+  }
+  buildSummaries_();
+}
+
+function updateTarget_(key, isOldDefault, changes) {
+  const row = readTable_('Targets').rows.find(t => t.key === key);
+  if (row && isOldDefault(row)) upsertRow_('Targets', 'key', Object.assign({}, row, changes));
 }
 
 function columnRange_(sh, header) {

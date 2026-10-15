@@ -1,7 +1,7 @@
 // Phone-sized screenshot of a URL via headless Edge/Chrome and the DevTools protocol.
 // Waits for a selector (the app renders after IndexedDB/network, past the load event),
 // and prints console messages and exceptions. Fresh profile each run.
-// Run: node tools/shot.js <url> <out.png> [selector] [--offline-reload] [--eval=<file.js>] [--viewport]
+// Run: node tools/shot.js <url> <out.png> [selector] [--offline-reload] [--eval=<file.js>] [--cdp=<file.js>] [--viewport]
 //   --eval runs the file in the page (as an async function body) after it renders and
 //   prints what it returns; use it to drive a flow (fill the form, save) before the shot.
 const { spawn } = require('child_process');
@@ -15,6 +15,9 @@ const [url, out, selector = '.prow, .notice'] = args.filter(a => !a.startsWith('
 const offlineReload = flags.includes('--offline-reload');
 const evalFile = flags.find(f => f.startsWith('--eval='))?.slice(7);
 const viewportOnly = flags.includes('--viewport'); // capture what is on screen, not the full page
+// --cdp=<file.js>: a Node module exporting async ({ send, evaluate, sleep }) => result, for
+// protocol-level input (real touch events) that page scripts can't produce.
+const cdpFile = flags.find(f => f.startsWith('--cdp='))?.slice(6);
 if (!url || !out) {
   console.error('usage: node tools/shot.js <url> <out.png> [selector] [--offline-reload]');
   process.exit(2);
@@ -97,6 +100,11 @@ async function main() {
 })()`, returnByValue: true, awaitPromise: true });
     if (r.exceptionDetails) console.log('eval EXCEPTION:', r.exceptionDetails.exception?.description || r.exceptionDetails.text);
     else console.log('eval:', JSON.stringify(r.result.value));
+  }
+
+  if (cdpFile) {
+    const run = require(path.resolve(cdpFile));
+    console.log('cdp:', JSON.stringify(await run({ send, evaluate, sleep })));
   }
 
   await sleep(900); // fonts settle, motion finishes

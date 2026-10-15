@@ -19,7 +19,8 @@ const TOKEN_KEY = `nickapp.token.${ENV}`;
 const REFRESH_MS = 5 * 60 * 1000;
 const view = document.getElementById('view');
 
-const state = { config: null, entries: [], outbox: [], lastSync: null, syncing: false, error: null };
+// weeks: last 5 closed weeks from WeekSummary/WeekStats (server-precomputed), for the strip.
+const state = { config: null, entries: [], outbox: [], weeks: [], lastSync: null, syncing: false, error: null };
 let flipFrom = null; // Home before the last Save, for the target-flip
 
 // The token stays on the URL (the installed app launches with it; iOS home-screen apps
@@ -41,14 +42,18 @@ async function loadLocal() {
     const demo = await import('./demo.js');
     state.config = demo.config;
     state.entries = demo.entries(todayEt());
+    state.weeks = demo.weeks(todayEt(), state.entries);
     return;
   }
-  [state.config, state.entries, state.outbox, state.lastSync] = await Promise.all([
+  let weeks;
+  [state.config, state.entries, state.outbox, weeks, state.lastSync] = await Promise.all([
     db.get('config', 'current'),
     db.getAll('entries'),
     db.getAll('outbox'),
+    db.get('meta', 'weeks'),
     db.get('meta', 'lastSync'),
   ]);
+  state.weeks = weeks || [];
 }
 
 const byDate = (a, b) => a.date.localeCompare(b.date);
@@ -83,20 +88,26 @@ async function refresh(force = false) {
       renderIfSafe(); // drop the "to upload" pill now, not after the pull below
     }
 
-    const [config, serverEntries] = await Promise.all([api.call('getConfig'), api.call('getEntries')]);
+    const [config, serverEntries, weeks] = await Promise.all([
+      api.call('getConfig'),
+      api.call('getEntries'),
+      api.call('getWeeks'),
+    ]);
     const outbox = await db.getAll('outbox');
     const entries = mergeEntries(serverEntries, outbox, await db.getAll('entries'));
     const changed =
       sent > 0 ||
       outbox.length !== state.outbox.length ||
       config.version !== state.config?.version ||
-      JSON.stringify(entries) !== JSON.stringify(state.entries);
+      JSON.stringify(entries) !== JSON.stringify(state.entries) ||
+      JSON.stringify(weeks) !== JSON.stringify(state.weeks);
 
     await db.put('config', config, 'current');
     await db.replaceAll('entries', entries);
+    await db.put('meta', weeks, 'weeks');
     state.lastSync = new Date().toISOString();
     await db.put('meta', state.lastSync, 'lastSync');
-    Object.assign(state, { config, entries, outbox, error: lastError });
+    Object.assign(state, { config, entries, outbox, weeks, error: lastError });
     if (changed || route().name === 'settings') renderIfSafe();
   } catch (err) {
     state.error = err.message || String(err);
@@ -160,7 +171,13 @@ function needsConfig() {
 function renderHomeView() {
   const home = homeNow();
   if (!DEMO) db.put('home', home, 'current').catch(() => {});
-  renderHome(view, home, { offline: !navigator.onLine, demo: DEMO, pending: state.outbox.length, from: flipFrom });
+  renderHome(view, home, {
+    offline: !navigator.onLine,
+    demo: DEMO,
+    pending: state.outbox.length,
+    from: flipFrom,
+    weeks: state.weeks,
+  });
   flipFrom = null;
 }
 

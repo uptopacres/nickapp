@@ -4,7 +4,8 @@ import { dayLabel, weekRangeLabel } from '../dates.js';
 
 function hitChips(e, priorities) {
   const chips = priorities
-    .filter(p => p.direction === 'max' && NickPacing.HIT_DAY[p.key]?.(e))
+    // Smoke-free is the default; only a smoke day earns a chip (below).
+    .filter(p => p.key !== 'smoke' && p.direction === 'max' && NickPacing.HIT_DAY[p.key]?.(e))
     .map(p => `<span class="hit-chip">${esc(p.label)}</span>`);
   if (NickPacing.isTrue(e.smoke)) chips.push('<span class="hit-chip hit-chip-smoke">Smoked</span>');
   return chips.join('') || '<span class="label">No priorities hit</span>';

@@ -37,7 +37,9 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; }
+/* No double-tap zoom anywhere (and no tap delay); pinch is off via the viewport tag. */
+html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+button, a, input, select, textarea, label { touch-action: manipulation; }
 body {
   margin: 0;
   background: var(--white);
@@ -120,6 +122,65 @@ button { font: inherit; color: inherit; }
   border-radius: var(--radius);
   background: var(--white);
 }
+
+/* ---------- Week strip: last completed weeks, above the hero ---------- */
+
+.weeks { margin-bottom: 14px; }
+.chevs {
+  /* Five nested chevrons fill the row; the 16% notch of each tucks under the point of
+     the one before, with a 4px seam. Width stays fixed at five-up when fewer exist. */
+  /* 5w - 4 × (0.16w - 4px) = 100%  →  w = (100% - 16px) / 4.36 */
+  --chev-w: calc((100% - 16px) / 4.36);
+  display: flex;
+  justify-content: flex-end; /* most recent sits right, next to "this week" */
+}
+.chev {
+  flex: none;
+  width: var(--chev-w);
+  height: 42px;
+  padding: 0 0 0 4%;
+  border: 0;
+  clip-path: polygon(0 0, 84% 0, 100% 50%, 84% 100%, 0 100%, 16% 50%);
+  background: var(--band);
+  color: var(--band-ink);
+  font-family: var(--serif);
+  font-size: 1.375rem;
+  font-weight: 600;
+  font-variant-numeric: lining-nums tabular-nums;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.chev + .chev { margin-left: calc(var(--chev-w) * -0.16 + 4px); }
+.chev:focus-visible { outline: none; background: var(--moss); color: var(--cream); }
+.weeks.has-open .chev:not([aria-expanded="true"]) { opacity: .45; }
+
+.band-low  { --band: var(--peachy);     --band-ink: var(--dirt); }
+.band-mid  { --band: var(--chartreuse); --band-ink: var(--moss); }
+.band-high { --band: var(--clover);     --band-ink: var(--white); }
+
+.week-detail { display: grid; grid-template-rows: 0fr; transition: grid-template-rows .25s ease; }
+.week-detail.open { grid-template-rows: 1fr; }
+.week-detail-inner { min-height: 0; overflow: hidden; }
+.week-detail-body {
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--divider);
+  border-radius: var(--radius);
+}
+.week-detail-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; margin-bottom: 10px; }
+.week-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 20px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.week-list li { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: .9375rem; }
+.week-list li span:last-child { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.week-list li.is-hit { color: var(--moss); font-weight: 600; }
+.week-list li.is-hit span:last-child::after { content: ' ✓'; color: var(--clover); }
 
 /* ---------- Home hero ---------- */
 
@@ -359,6 +420,12 @@ button { font: inherit; color: inherit; }
   line-height: 1;
   cursor: pointer;
 }
+.stepper button {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none; /* no iOS long-press menu while holding to repeat */
+}
+.stepper button:active { background: var(--hover); }
 .stepper button:first-child { border-radius: var(--radius) 0 0 var(--radius); }
 .stepper button:last-child { border-radius: 0 var(--radius) var(--radius) 0; }
 .stepper .input { border-inline: 0; border-radius: 0; text-align: center; }

@@ -10,6 +10,7 @@ const ACTIONS = {
   getHome: (user) => getHome_(user),
   getEntries: (user) => getEntries_(user),
   saveEntry: (user, req) => saveEntry_(user, req),
+  getWeeks: (user) => getWeeks_(user),
 };
 
 // Expected rejections: the client's problem, not worth an alert email.

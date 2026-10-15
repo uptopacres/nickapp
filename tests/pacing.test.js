@@ -6,14 +6,14 @@ const P = require('../apps-script/Pacing.js');
 const PRIORITIES = [
   { key: 'exercise', label: 'Exercise', direction: 'max', target: 4 },
   { key: 'read', label: 'Read', direction: 'max', target: 5 },
-  { key: 'sadie', label: 'Sadie', direction: 'max', target: 7 },
+  { key: 'sadie', label: 'Sadie', direction: 'max', target: 6 },
   { key: 'sarah', label: 'Sarah', direction: 'max', target: 1 },
   { key: 'newexp', label: 'New experience', direction: 'max', target: 1 },
   { key: 'friends', label: 'Friends', direction: 'max', target: 2 },
   { key: 'deepwork', label: 'Deep work', direction: 'max', target: 3 },
   { key: 'eating', label: 'Eating', direction: 'max', target: 5 },
   { key: 'sleep', label: 'Sleep', direction: 'max', target: 5 },
-  { key: 'smoke', label: 'Smoke', direction: 'min', target: 0 },
+  { key: 'smoke', label: 'Smoke', direction: 'max', target: 6 },
 ];
 const row = (home, key) => home.priorities.find(p => p.key === key);
 // Week of Mon 2026-10-12 .. Sun 2026-10-18.
@@ -27,11 +27,11 @@ test('date helpers: Monday weeks, DST-safe', () => {
   assert.equal(P.addDays('2026-12-31', 1), '2027-01-01');
 });
 
-test('Monday morning, nothing logged: everything on pace, smoke hit', () => {
+test('Monday morning, nothing logged: everything on pace, smoke included', () => {
   const h = P.computeHome([], PRIORITIES, '2026-10-12');
   assert.equal(h.todayLogged, false);
   for (const p of h.priorities) {
-    assert.equal(p.status, p.key === 'smoke' ? 'hit' : 'on-pace', p.key);
+    assert.equal(p.status, 'on-pace', p.key);
     assert.equal(p.requiredByToday, 0);
     assert.equal(p.daysLeft, 7);
   }
@@ -64,27 +64,49 @@ test('hit as soon as target reached', () => {
 });
 
 test('missed only when out of reach', () => {
-  // Fri logged, Sadie 4 of 7: 4 + 2 remaining < 7.
-  const entries = ['12', '13', '14', '15', '16'].map((d, i) => day(`2026-10-${d}`, { sadieDone: i < 4 }));
+  // Fri logged, Sadie 3 of 6: 3 + 2 remaining < 6.
+  const entries = ['12', '13', '14', '15', '16'].map((d, i) => day(`2026-10-${d}`, { sadieDone: i < 3 }));
   assert.equal(row(P.computeHome(entries, PRIORITIES, '2026-10-16'), 'sadie').status, 'missed');
 });
 
 test('Sunday before logging is still reachable', () => {
-  const entries = ['12', '13', '14', '15', '16', '17'].map(d => day(`2026-10-${d}`, { sadieDone: true }));
+  const entries = ['12', '13', '14', '15', '16', '17'].map((d, i) => day(`2026-10-${d}`, { sadieDone: i > 0 }));
   const r = row(P.computeHome(entries, PRIORITIES, '2026-10-18'), 'sadie');
-  assert.equal(r.status, 'on-pace');
+  assert.equal(r.status, 'at-risk'); // 5 of 6, behind linear pace but tonight can still hit it
   assert.equal(r.daysLeft, 1);
   // Logged Sunday without Sadie: now out of reach.
   entries.push(day('2026-10-18'));
   assert.equal(row(P.computeHome(entries, PRIORITIES, '2026-10-18'), 'sadie').status, 'missed');
 });
 
-test('smoke: any smoke day breaks the week', () => {
-  const h = P.computeHome([day('2026-10-12', { smoke: 'TRUE' }), day('2026-10-13', { smoke: false })], PRIORITIES, '2026-10-13');
+test('smoke: credit only for logged smoke-free days, X/6', () => {
+  const h = P.computeHome([day('2026-10-12', { smoke: 'TRUE' }), day('2026-10-13', { smoke: false })], PRIORITIES, '2026-10-14');
   const r = row(h, 'smoke');
-  assert.equal(r.hits, 1);
-  assert.equal(r.status, 'broken');
-  assert.equal(r.requiredByToday, 0);
+  assert.equal(r.hits, 1); // Mon smoked, Tue clean, Wed not logged yet
+  assert.equal(r.target, 6);
+  assert.equal(r.status, 'at-risk'); // needs ceil(6*2/7) = 2 by Tue
+});
+
+test('min-direction priorities still work (kept generic)', () => {
+  assert.equal(P.paceStatus({ direction: 'min', target: 0, hits: 0 }), 'hit');
+  assert.equal(P.paceStatus({ direction: 'min', target: 0, hits: 1 }), 'broken');
+});
+
+test('weekScore: closed week totals, zero for an unlogged week', () => {
+  const ws = '2026-10-05';
+  const full = ['05', '06', '07', '08', '09', '10', '11'].map((d, i) =>
+    day(`2026-10-${d}`, { exerciseDone: i < 4, readDone: i < 5, sadieDone: i < 6, sarahDone: i === 0, smoke: i === 6, eating: 'on track', sleep: '7-8' })
+  );
+  const s = P.weekScore([...full, day('2026-10-12', { readDone: true })], PRIORITIES, ws);
+  assert.equal(s.daysLogged, 7);
+  assert.equal(s.tracked, 10);
+  // hit: exercise 4/4, read 5/5, sadie 6/6, sarah 1/1, eating 7/5, sleep 7/5, smoke 6/6 = 7; missed: newexp, friends, deepwork
+  assert.equal(s.targetsHit, 7);
+  assert.equal(s.priorities.find(p => p.key === 'smoke').status, 'hit');
+  assert.equal(s.priorities.find(p => p.key === 'friends').status, 'missed');
+  const empty = P.weekScore(full, PRIORITIES, '2026-09-28');
+  assert.equal(empty.daysLogged, 0);
+  assert.equal(empty.targetsHit, 0);
 });
 
 test('eating counts only on track; sleep needs the 7-8 or 8+ bucket', () => {

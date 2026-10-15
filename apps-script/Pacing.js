@@ -47,7 +47,13 @@ var NickPacing = (function () {
   }
 
   /**
-   * Status for one priority: hit | on-pace | at-risk | missed (max), hit | broken (min).
+   * Status for one priority (max): hit | on-pace | in-reach | at-risk | missed.
+   * Min-direction priorities: hit | broken.
+   *   need = hits still required, open = days still loggable this week
+   *   on-pace   at or ahead of linear pace
+   *   in-reach  behind pace, but with slack: open days > need
+   *   at-risk   no slack left: every open day has to count (open === need)
+   *   missed    out of reach (open < need), or the week closed short
    *  paceDays: days of the week already decided. Today counts only once it is logged,
    *            so an unlogged today is still open (never "missed" while reachable).
    *  closed:   the week is over (WeekStats rollups).
@@ -56,8 +62,11 @@ var NickPacing = (function () {
     if (p.direction === 'min') return p.hits > p.target ? 'broken' : 'hit';
     if (p.hits >= p.target) return 'hit';
     const paceDays = p.closed ? 7 : p.paceDays;
-    if (p.hits + (7 - paceDays) < p.target) return 'missed';
-    return p.hits >= requiredBy(p.target, paceDays) ? 'on-pace' : 'at-risk';
+    const need = p.target - p.hits;
+    const open = 7 - paceDays;
+    if (open < need) return 'missed';
+    if (p.hits >= requiredBy(p.target, paceDays)) return 'on-pace';
+    return open === need ? 'at-risk' : 'in-reach';
   }
 
   /**

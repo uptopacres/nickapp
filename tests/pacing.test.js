@@ -42,7 +42,8 @@ test('Monday morning, nothing logged: everything on pace, smoke included', () =>
 
 test('linear pace: Tuesday logged, exercise 4/wk needs 2 by today', () => {
   const one = [day('2026-10-12', { exerciseDone: true }), day('2026-10-13')];
-  assert.equal(row(P.computeHome(one, PRIORITIES, '2026-10-13'), 'exercise').status, 'at-risk');
+  // Behind pace (1 < 2) but 3 needed with 5 days open: slack left.
+  assert.equal(row(P.computeHome(one, PRIORITIES, '2026-10-13'), 'exercise').status, 'in-reach');
   const two = [day('2026-10-12', { exerciseDone: true }), day('2026-10-13', { exerciseDone: 'TRUE' })];
   const r = row(P.computeHome(two, PRIORITIES, '2026-10-13'), 'exercise');
   assert.equal(r.requiredByToday, 2);
@@ -56,6 +57,18 @@ test('unlogged today is judged through yesterday', () => {
   assert.equal(r.requiredByToday, 1);
   assert.equal(r.daysLeft, 6);
   assert.equal(r.status, 'on-pace');
+});
+
+test('in reach vs at risk: at risk only when every open day has to count', () => {
+  const max = (target, hits, paceDays) => P.paceStatus({ direction: 'max', target, hits, paceDays });
+  // Wednesday logged (3 days decided, 4 open)
+  assert.equal(max(2, 0, 3), 'in-reach'); // friends: 2 needed, 4 open
+  assert.equal(max(1, 0, 3), 'in-reach'); // sarah: 1 needed, 4 open
+  assert.equal(max(5, 1, 3), 'at-risk'); // 4 needed, 4 open
+  assert.equal(max(5, 0, 3), 'missed'); // 5 needed, 4 open
+  assert.equal(max(4, 2, 3), 'on-pace'); // ceil(12/7) = 2
+  // Saturday logged (6 decided, 1 open)
+  assert.equal(max(1, 0, 6), 'at-risk'); // last chance
 });
 
 test('hit as soon as target reached', () => {

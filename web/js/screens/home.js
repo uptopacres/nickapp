@@ -2,7 +2,14 @@
 import { esc, ICONS } from '../ui.js';
 import { weekRangeLabel } from '../dates.js';
 
-const STATUS_TEXT = { hit: 'hit', 'on-pace': 'on pace', 'at-risk': 'at risk', missed: 'missed', broken: 'broken' };
+const STATUS_TEXT = {
+  hit: 'hit',
+  'on-pace': 'on pace',
+  'in-reach': 'in reach',
+  'at-risk': 'at risk',
+  missed: 'missed',
+  broken: 'broken',
+};
 const DOW = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function fillPct(p) {

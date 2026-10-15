@@ -230,6 +230,8 @@ button { font: inherit; color: inherit; }
 
 .s-hit      { --status-color: var(--clover);     --status-ink: var(--white); }
 .s-on-pace  { --status-color: var(--chartreuse); --status-ink: var(--moss); }
+/* Behind pace with slack left: a quiet brand gray-green, not a warning. */
+.s-in-reach { --status-color: var(--divider);    --status-ink: var(--moss); }
 .s-at-risk  { --status-color: var(--peachy);     --status-ink: var(--dirt); }
 .s-missed   { --status-color: var(--tomato);     --status-ink: var(--dirt); }
 .s-broken   { --status-color: var(--beet);       --status-ink: var(--white); }

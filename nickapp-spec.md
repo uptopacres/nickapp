@@ -525,3 +525,7 @@ Flag changes on these five and this is build-ready.
       nightly run hasn't happened yet. The phone caches it, so the strip renders offline.
 12. **Steppers:** act on touch-down and repeat while held; the installed app disables
     page zoom (`maximum-scale=1, user-scalable=no`, `touch-action: manipulation`).
+13. **"In reach" status (2026-10-14):** between on pace and at risk. Behind linear pace
+    but with slack (open days > hits still needed) shows **in reach** in the brand
+    gray-green `#D5DCCB`; **at risk** (Peachy) now means no slack left, every open day
+    has to count. Hero still counts hit + on pace.

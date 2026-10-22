@@ -124,18 +124,51 @@ async function refresh(force = false) {
   }
 }
 
+// Phone writes run one at a time, so a Save or discard never lands under an earlier auto-save.
+let writes = Promise.resolve();
+function persist(fn) {
+  const p = writes.then(fn);
+  writes = p.catch(() => {});
+  return p;
+}
+
+const putLocal = entry =>
+  (state.entries = [...state.entries.filter(e => e.entryId !== entry.entryId), entry].sort(byDate));
+
+let entryBaseline = null; // Home when the form opened; auto-saves land before Save does
+let leaveEntry = null; // flushes the open form's pending auto-save
+
 /** Save (spec §9): phone first, "Saved", Home repaints with the flip, upload follows. */
 async function handleSave({ entry, photo }) {
-  const before = homeNow();
+  const before = entryBaseline || homeNow();
   if (!DEMO) {
-    await sync.enqueue(entry, photo);
+    await persist(() => sync.enqueue(entry, photo));
     state.outbox = await db.getAll('outbox');
   }
-  state.entries = [...state.entries.filter(e => e.entryId !== entry.entryId), entry].sort(byDate);
+  putLocal(entry);
   flipFrom = before;
   toast('Saved');
   location.hash = '#home';
   refresh(true);
+}
+
+/** Auto-save while the form is open: onto the phone and the outbox, no navigation. */
+function handleAutoSave({ entry, photo }) {
+  putLocal(entry); // now, so a Home render right after leaving the form already has it
+  if (DEMO) return Promise.resolve();
+  return persist(async () => {
+    await sync.enqueue(entry, photo);
+    state.outbox = await db.getAll('outbox');
+  });
+}
+
+/** Drops a day the form auto-saved but then moved to another date (backfill). */
+function handleDiscard(entryId) {
+  if (DEMO) return void (state.entries = state.entries.filter(e => e.entryId !== entryId));
+  persist(async () => {
+    if (await sync.discard(entryId)) state.entries = state.entries.filter(e => e.entryId !== entryId);
+    state.outbox = await db.getAll('outbox');
+  }).catch(err => console.warn('discard failed', err));
 }
 
 // ---------- routing ----------
@@ -182,6 +215,8 @@ function renderHomeView() {
 }
 
 function render() {
+  leaveEntry?.();
+  leaveEntry = null;
   const { name, arg } = route();
   setActiveTab(name);
   window.scrollTo(0, 0);
@@ -212,7 +247,17 @@ function render() {
     case 'entry': {
       const today = todayEt();
       const date = /^\d{4}-\d{2}-\d{2}$/.test(arg || '') && arg <= today ? arg : today;
-      return renderEntry(view, { config: state.config, entries: state.entries, date, today, onSave: handleSave });
+      entryBaseline = homeNow();
+      leaveEntry = renderEntry(view, {
+        config: state.config,
+        entries: () => state.entries,
+        date,
+        today,
+        onSave: handleSave,
+        onAutoSave: handleAutoSave,
+        onDiscard: handleDiscard,
+      });
+      return;
     }
     case 'history':
       return renderHistory(view, {

@@ -548,6 +548,7 @@ button { font: inherit; color: inherit; }
 }
 .lift-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; }
 .lift-name { font-weight: 600; color: var(--moss); }
+.lift-last { margin: -4px 0 10px; }
 .lift-nums { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
 .lift-nums .label { display: block; margin-bottom: 4px; }
 

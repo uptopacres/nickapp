@@ -41,8 +41,11 @@ function fromEntry(e) {
 }
 
 /**
- * ctx: { config, entries, date, today, onSave({ entry, photo }) }
- *   photo passed to onSave: Blob (new), null (removed), undefined (unchanged)
+ * ctx: { config, entries(), date, today, onSave({ entry, photo }), onAutoSave({ entry, photo }), onDiscard(entryId) }
+ *   photo passed to onSave/onAutoSave: Blob (new), null (removed), undefined (unchanged)
+ *   onAutoSave keeps a change on the phone without leaving the form; onDiscard drops a day
+ *   this form auto-saved that had no entry before (the date was changed to backfill).
+ * Returns leave(): call it before the form is replaced, so a pending auto-save lands first.
  */
 export function renderEntry(root, ctx) {
   const { config, today } = ctx;
@@ -56,6 +59,9 @@ export function renderEntry(root, ctx) {
   let photo;
   let form;
   const pickerMode = {};
+  let autoTimer = null;
+  let lastSaved = null; // JSON of the entry last written, to skip no-op auto-saves
+  let createdDate = null; // a day auto-saved here that had no entry when the form opened
 
   // ---------- markup ----------
 
@@ -100,6 +106,7 @@ export function renderEntry(root, ctx) {
           <a class="icon-btn" href="#home" aria-label="Back to Home">${ICONS.back}</a>
           <h1 class="section-title" data-title></h1>
         </div>
+        <span class="label" data-autosaved role="status"></span>
       </header>
       <div data-notice></div>
 
@@ -220,6 +227,34 @@ export function renderEntry(root, ctx) {
     );
   }
 
+  const liftKey = l => (l.exercise === 'Other' ? String(l.exerciseOther || '').trim().toLowerCase() : l.exercise);
+
+  /** "Last time, Sat, Oct 18: 135 × 8 reps × 3 sets" from the latest earlier day with this exercise. */
+  function lastLiftText(l) {
+    const key = liftKey(l);
+    if (!key) return '';
+    const has = v => v !== '' && v != null;
+    const fmt = x =>
+      [has(x.weight) ? String(x.weight) : '', has(x.reps) ? `${x.reps} reps` : '', has(x.sets) ? `${x.sets} sets` : '']
+        .filter(Boolean)
+        .join(' × ') || 'no numbers logged';
+    const entries = ctx.entries(); // sorted by date
+    for (let k = entries.length - 1; k >= 0; k--) {
+      const e = entries[k];
+      if (e.date >= s.date) continue;
+      const sets = (e.lifts || []).filter(x => liftKey(x) === key);
+      if (sets.length) return `Last time, ${dayLabel(e.date)}: ${sets.map(fmt).join(' · ')}`;
+    }
+    return '';
+  }
+
+  function updateLastLift(i) {
+    const el = $(`[data-lift-last="${i}"]`);
+    if (!el) return;
+    el.textContent = lastLiftText(s.lifts[i]);
+    el.hidden = !el.textContent;
+  }
+
   function liftRow(l, i) {
     if (!l.exercise) {
       return `
@@ -239,11 +274,13 @@ export function renderEntry(root, ctx) {
     const name = l.exercise === 'Other'
       ? `<input class="input" type="text" data-lift-index="${i}" data-lift-field="exerciseOther" value="${esc(l.exerciseOther)}" placeholder="Describe the exercise" maxlength="120" aria-label="Describe the exercise">`
       : `<span class="lift-name">${esc(l.exercise)}</span>`;
+    const last = lastLiftText(l);
     return `
       <div class="lift">
         <div class="lift-head">${name}
           <button type="button" class="link-btn" data-act="lift-remove" data-index="${i}">Remove</button>
         </div>
+        <p class="label lift-last" data-lift-last="${i}"${last ? '' : ' hidden'}>${esc(last)}</p>
         <div class="lift-nums">${num('weight', 'Weight', 'decimal')}${num('reps', 'Reps', 'numeric')}${num('sets', 'Sets', 'numeric')}</div>
       </div>`;
   }
@@ -336,7 +373,15 @@ export function renderEntry(root, ctx) {
       $('input[data-field="date"]').value = s.date;
       return notice("You can't log a day that hasn't happened yet.", 'notice-warn');
     }
-    const saved = ctx.entries.find(e => e.date === date);
+    // The old day: keep edits to an entry it already had; drop one only auto-saved here.
+    if (createdDate === s.date) {
+      clearTimeout(autoTimer);
+      ctx.onDiscard(`${config.user.id}_${s.date}`);
+      createdDate = null;
+    } else {
+      saveNow();
+    }
+    const saved = ctx.entries().find(e => e.date === date);
     if (saved) {
       load(date);
       return notice(`Loaded your saved entry for ${dayLabel(date)}.`);
@@ -344,8 +389,11 @@ export function renderEntry(root, ctx) {
     // Backfill: keep what's been filled in, as a new day.
     s.date = date;
     existing = null;
+    lastSaved = null;
     updateTitle();
+    renderLifts(); // "last time" is relative to the date
     notice('');
+    autosave();
   }
 
   async function onPhotoPicked(file) {
@@ -439,6 +487,7 @@ export function renderEntry(root, ctx) {
     const errs = validate();
     const box = $('[data-errors]');
     if (errs.length) {
+      saveNow(); // keep it on the phone while the gaps get filled
       box.innerHTML = `<div class="notice notice-error" role="alert">${errs.map(([, m]) => esc(m)).join('<br>')}</div>`;
       errs.forEach(([f]) => $(`input[data-field="${f}"]`)?.classList.add('invalid'));
       const first = $(`input[data-field="${errs[0][0]}"]`);
@@ -447,17 +496,58 @@ export function renderEntry(root, ctx) {
       return;
     }
     box.innerHTML = '';
+    clearTimeout(autoTimer);
+    const built = build();
+    lastSaved = JSON.stringify(built.entry);
     const save = $('[data-save]');
     save.disabled = true;
     save.textContent = 'Saving…';
     try {
-      await ctx.onSave(build());
+      await ctx.onSave(built);
     } catch (err) {
       console.error('save failed', err);
       box.innerHTML = `<div class="notice notice-error" role="alert">Couldn't save on this phone: ${esc(err.message || err)}</div>`;
       save.disabled = false;
       save.textContent = 'Save';
     }
+  }
+
+  // ---------- auto-save ----------
+  // Each change lands on the phone shortly after, and at once when the app is hidden or
+  // the form is left, so putting the phone down mid-workout loses nothing. Save still
+  // validates, goes Home with the flip, and uploads right away.
+
+  const AUTOSAVE_MS = 800;
+
+  function autosave() {
+    clearTimeout(autoTimer);
+    autoTimer = setTimeout(saveNow, AUTOSAVE_MS);
+  }
+
+  function saveNow() {
+    clearTimeout(autoTimer);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(s.date) || s.date > today) return;
+    const built = build();
+    const json = JSON.stringify(built.entry);
+    if (json === lastSaved) return;
+    lastSaved = json;
+    if (!existing) createdDate = s.date;
+    ctx.onAutoSave(built).then(
+      () => {
+        if (form.isConnected) $('[data-autosaved]').textContent = 'Saved on phone';
+      },
+      err => console.warn('auto-save failed', err)
+    );
+  }
+
+  const onHide = () => document.visibilityState === 'hidden' && saveNow();
+  document.addEventListener('visibilitychange', onHide);
+  window.addEventListener('pagehide', saveNow);
+
+  function leave() {
+    saveNow();
+    document.removeEventListener('visibilitychange', onHide);
+    window.removeEventListener('pagehide', saveNow);
   }
 
   // ---------- wiring ----------
@@ -504,6 +594,7 @@ export function renderEntry(root, ctx) {
     form.addEventListener('click', e => {
       const btn = e.target.closest('button');
       if (!btn || btn.type === 'submit') return;
+      autosave(); // a no-op when nothing actually changed
       const group = btn.closest('[data-seg]');
       if (group) return setSeg(group, btn.dataset.value);
       const chipBox = btn.closest('[data-chips]');
@@ -517,7 +608,7 @@ export function renderEntry(root, ctx) {
         case 'step':
           // Pointer taps were handled on pointerdown; this is keyboard (Enter/Space).
           if (e.detail === 0) step(btn);
-          return;
+          return autosave();
         case 'pick':
           s[f] = btn.dataset.value;
           pickerMode[f] = 'search';
@@ -561,23 +652,29 @@ export function renderEntry(root, ctx) {
       } else if (el.dataset.liftSearch !== undefined) {
         renderLiftList(Number(el.dataset.liftSearch), el.value);
       } else if (el.dataset.liftField) {
-        s.lifts[Number(el.dataset.liftIndex)][el.dataset.liftField] = el.value;
+        const i = Number(el.dataset.liftIndex);
+        s.lifts[i][el.dataset.liftField] = el.value;
+        if (el.dataset.liftField === 'exerciseOther') updateLastLift(i);
       }
+      autosave();
     });
 
     form.addEventListener('change', e => {
       if (e.target.dataset.field === 'date') onDateChange(e.target.value);
       else if (e.target.hasAttribute('data-photo-input')) {
-        onPhotoPicked(e.target.files?.[0]);
+        onPhotoPicked(e.target.files?.[0]).then(autosave);
         e.target.value = '';
       }
     });
   }
 
   function load(date) {
-    existing = ctx.entries.find(e => e.date === date) || null;
+    clearTimeout(autoTimer);
+    existing = ctx.entries().find(e => e.date === date) || null;
     s = existing ? fromEntry(existing) : blank(date);
     photo = { mode: 'keep', blob: null };
+    lastSaved = JSON.stringify(build().entry);
+    createdDate = null;
     pickerMode.readTitle = s.readTitle && !readingList.some(r => r.title === s.readTitle) ? 'other' : 'search';
 
     form = document.createElement('form');
@@ -594,4 +691,5 @@ export function renderEntry(root, ctx) {
   }
 
   load(ctx.date);
+  return leave;
 }

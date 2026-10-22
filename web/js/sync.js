@@ -26,6 +26,14 @@ export async function enqueue(entry, photo) {
   await db.put('entries', entry);
 }
 
+/** Drops a day that never left the phone. False when it already uploaded (nothing dropped). */
+export async function discard(entryId) {
+  if (!(await db.get('outbox', entryId))) return false;
+  await db.del('outbox', entryId);
+  await db.del('entries', entryId);
+  return true;
+}
+
 /**
  * Uploads due outbox items oldest first; stops at the first failure. One run at a time.
  * force: ignore backoff (the connection just came back, or the user asked).
